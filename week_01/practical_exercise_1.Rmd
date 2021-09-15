@@ -63,6 +63,8 @@ Today's first goal is to get your _R_ and _Python_ environments up and running
 Make sure you can run _R Markdown_; create a new _R Markdown_ document - if you're asked to install extra packages, do so.  
 We'll need more packages later, but we'll install as we go...
 
+
+
 ## _Python_
 
 Due to the fact that _Python_ packages have a lot of interdependencies that may cause compability problems if you keep everything in one big environment, it is advisable to use a package management system like _Conda_.  
