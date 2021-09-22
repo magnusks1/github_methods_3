@@ -1,6 +1,6 @@
 ---
 title: "practical_exercise_2, Methods 3, 2021, autumn semester"
-author: '[FILL IN YOUR NAME]'
+author: 'Magnus K. Sigaard'
 date: "[FILL IN THE DATE]"
 output: pdf_document
 ---
@@ -13,6 +13,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load('lme4', 'dplyr')
 ```
 
 # Assignment 1: Using mixed effects modelling to model hierarchical data
@@ -38,9 +39,53 @@ REMEMBER: This assignment will be part of your final portfolio
 
 1) Describe the dataset, such that someone who happened upon this dataset could understand the variables and what they contain  
     i. Also consider whether any of the variables in _politeness_ should be encoded as factors or have the factor encoding removed. Hint: ```?factor```  
+
+```{r}
+# 1
+
+# Providing an overview of the data set and their data type
+glimpse(politeness)
+
+# Encoding columns 'subject', 'gender' and 'attitude' as factors
+politeness <- politeness %>% 
+  mutate(
+    subject = as.factor(subject),
+    gender = as.factor(gender),
+    attitude = as.factor(subject))
+```
+
 2) Create a new data frame that just contains the subject _F1_ and run two linear models; one that expresses _f0mn_ as dependent on _scenario_ as an integer; and one that expresses _f0mn_ as dependent on _scenario_ encoded as a factor  
     i. Include the model matrices, $X$ from the General Linear Model, for these two models in your report and describe the different interpretations of _scenario_ that these entail
     ii. Which coding of _scenario_, as a factor or not, is more fitting?
+
+```{r}
+# 2
+
+# Creating new data frame
+new_politeness <- politeness %>% 
+  filter(subject == 'F1')
+
+# Linear model 1
+model_integer <- lm(f0mn ~ scenario, data = new_politeness)
+model_integer
+
+# Encoding scenario as factor
+scenario_asfactor <- new_politeness %>% 
+  mutate(
+    scenario = as.factor(scenario))
+
+# Linear model 2
+model_factor <- lm(f0mn ~ scenario, data = scenario_asfactor)
+model_factor
+
+# i.
+model.matrix(model_integer)
+model.matrix(model_factor)
+
+# ii.
+# The factor encoding is definitely best ... but why?
+```
+
 3) Make a plot that includes a subplot for each subject that has _scenario_ on the x-axis and _f0mn_ on the y-axis and where points are colour coded according to _attitude_
     i. Describe the differences between subjects
     
