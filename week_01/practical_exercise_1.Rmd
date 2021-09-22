@@ -33,7 +33,7 @@ If you are not already using personal tokens for authentication, have a look her
 https://www.edgoad.com/2021/02/using-personal-access-tokens-with-git-and-github.html
 
 Then install _R_ and _RStudio_ if you haven't already
-
+lll 
 ## _R_
 
 ### Mac and Windows
@@ -63,6 +63,9 @@ Today's first goal is to get your _R_ and _Python_ environments up and running
 Make sure you can run _R Markdown_; create a new _R Markdown_ document - if you're asked to install extra packages, do so.  
 We'll need more packages later, but we'll install as we go...
 
+```{r}
+# this is a test lol ... where will this end??
+```
 
 
 ## _Python_
@@ -169,7 +172,78 @@ The general linear model: $Y = X \beta + \epsilon$:
 Do a linear regression, expressing fuel usage as a function of weight using the function __lm__  
 ```{r, eval=FALSE}
 data(mtcars)
-model <- lm(formula=..., data=...)
+model <- lm(formula=mpg ~ wt, data=mtcars)
+model
+
+# 1 — Extracting values
+# estimated beta value (the slope)
+Beta_hat <- model$coefficients
+Beta_hat
+# Every time the weight increases by one lb/1000, the fuel usage decreases by 5.344. This seems a bit weird though? 
+
+# Actual Y-values (from data set)
+y_values <- mtcars$mpg
+y_values
+
+# Estimated Y-values (y-hat)
+estimated_y <- predict(model)
+estimated_y
+# these Y-values are predicted based on the model.
+
+# X-values (actual values from data set in design matrix)
+X <- model.matrix(model)
+mtcars$wt
+# can be done in both of the above-seen ways. By using model.matrix, you also get the intercept.
+
+# Epsilon / errors — these are also known as residuals
+residuals <- model$residuals
+# in other words, these are the differences between actual y-values and estimated y-values.
+
+# 1.i 
+library(tidyverse)
+ggplot(mtcars, aes(wt))+
+  geom_point(aes(y=y_values), color = "green")+
+  geom_point(aes(y=estimated_y), color = "red")+
+    geom_line(aes(y=estimated_y), color ="red")+
+  geom_linerange(aes(residuals), ymin = y_values, ymax = estimated_y, x=mtcars$wt, color = "darkgreen")+
+  xlab("Weight in lb/1000") + ylab("Y-values")
+
+# Red line/points are the estimated values
+# Light green points are actual y-values
+# Dark green lines are residuals / epsilon.
+
+# 2 — Quadratic model
+new_X <- as.data.frame(X)
+new_X$wt_squared <- new_X$wt^2
+new_X <- as.matrix(new_X)
+# now we have a matrix with a constant (intercept) of 1, a column containing the actual x-values and one containing squared x-values.
+
+# now, we will estimate the beta-value by using solve-function and a transposed matrix.
+bhat <- solve(t(new_X) %*% new_X) %*% t(new_X) %*% y_values
+bhat
+# both the acquired intercept (49.9) and the slope (-13.38) are quite far from the values of the original model created using lm.
+
+# 3 — Compare the models
+q_model <- lm(mpg ~ wt+ I(wt^2), data=mtcars)
+summary(q_model)
+bhat_lm_q <- q_model$coefficients
+
+## putting beta_hat from both the OLS and lm() in one table
+all_coefficents <- cbind(bhat_ols_q, bhat_lm_q) 
+colnames(all_coefficents) <- c("OLS", "lm()") #adding and naming the columns 
+
+# estimate y-values with quadratic model
+estimated_y_q <- predict(q_model)
+
+# 3i plotting comparison of new estimated y values and actual y values 
+quadratic_plot <- ggplot(mtcars, aes(wt))+
+  geom_point(aes(y=y_values), color = "green")+
+  geom_point(aes(y=estimated_y_q), color = "red")+
+    geom_line(aes(y=estimated_y_q), color ="red")+
+  geom_linerange(aes(residuals), ymin = y_values, ymax = estimated_y_q, x=mtcars$wt, color = "darkgreen")+
+  labs(x="Weight (x-values)", y = "Actual Values (mpg)", title = "Predicted vs. Actual Values with Quadratic")
+quadratic_plot
+```
 ```
 1. extract $\hat{\beta}$, $Y$, $\hat{Y}$, $X$ and $\epsilon$ from __model__ (hint: have a look at the function __model.matrix__)  
     i. create a plot that illustrates $Y$ and $\hat{Y}$ (if you are feeling ambitious, also include $\epsilon$ (hint: you can use the function __arrows__))
@@ -189,12 +263,86 @@ Compare the plotted quadratic fit to the linear fit
 4. bonus question: which summary statistic is the fitted value (_Intercept_ or ${\beta}_0$ in $y = {\beta}_0$) below identical to?
 ```{r, echo=FALSE}
 lm(mpg ~ 1, data=mtcars)
+#Exercise 2
+# 1 
+#plotting both models in the same graph 
+models_together <- ggplot(mtcars, aes(wt))+
+  geom_point(aes(y=y_values), color = "green")+
+  #geom_point(aes(y=estimated_y_q), color = "red")+
+    geom_line(aes(y=estimated_y_q), color ="red")+
+      geom_line(aes(y=estimated_y), color ="blue")+
+  #geom_linerange(aes(residuals), ymin = y_values, ymax = estimated_y_q, x=mtcars$wt, color = "darkgreen")+
+  labs(x="Weight (x-values)", y = "Actual Values (mpg)", title = "Comparison of Linear and Quadratic Models")
+models_together
+#Side by side comparison 
+ggpubr::ggarrange(linear_plot, quadratic_plot)
+
+# 2
+## To get SSE (sum of squared errors), taking (estimated y-value - actual y-value)^2 and adding all that together. 
+sum_residuals_lm <- sum((model$residuals)^2)
+sum_residuals_lm 
+sum_residuals_quad <- sum((q_model$residuals)^2)
+sum_residuals_quad
+## putting beta_hat from both the OLS and lm() in one table
+SSE_comparison <- cbind(sum_residuals_lm , sum_residuals_quad) 
+colnames(SSE_comparison) <- c("lm()", "quad") #adding and naming the columns 
+SSE_comparison
+
+# 3
+# i. 
+cube_model <- lm(mpg ~ wt+ I(wt^2)+ I(wt^3), data=mtcars)
+summary(cube_model)
+# estimate y-values with the cubed model
+estimated_y_c <- predict(cube_model)
+c_q_models <- ggplot(mtcars, aes(wt))+
+  geom_point(aes(y=y_values), color = "green")+
+  #geom_point(aes(y=estimated_y_q), color = "red")+
+    geom_line(aes(y=estimated_y_q), color ="red")+
+      geom_line(aes(y=estimated_y_c), color ="blue")+
+  #geom_linerange(aes(residuals), ymin = y_values, ymax = estimated_y_q, x=mtcars$wt, color = "darkgreen")+
+  labs(x="Weight (x-values)", y = "Actual Values (mpg)", title = "Comparison of Quadratic and Cubic Models")
+c_q_models
+```
+
+Visually the lines are almost on topic of each other and when looking at the SSE they are almost the same there as well.
+
+3.ii
+```{r}
+# ii. compare SSE 
+sum_residuals_quad <- sum((q_model$residuals)^2)
+sum_residuals_quad
+sum_residuals_cube <- sum((cube_model$residuals)^2)
+sum_residuals_cube
+## putting beta_hat from both the OLS and lm() in one table
+SSE_comparison_qc <- cbind(sum_residuals_quad, sum_residuals_cube) 
+colnames(SSE_comparison) <- c("quad", "cubic") #adding and naming the columns 
+SSE_comparison_qc
+```
+
+
+3.iii - cubic beta value
+$\hat{\beta_3}$
+```{r}
+#showing all coefficients
+cube_model$coefficients
+# specific beta3
+cube_model$coefficients[4]
+```
+It is very small and therefore makes sense that it does not have a large impact on the model which is why the quadratic and cubic models are so similar.
+```
+The quadratic model has the lower SSE and therefore is a better fit of the data. 
+```
+Visually it's too hard to tell which is better 
 ```
 ## Exercise 3
 Doing a logistic regression - estimating the probability that a car has automatic transmission (0) or manual transmission (1) based on its weight
 ```{r, eval=FALSE}
 data(mtcars)
 logistic.model <- glm(formula=..., data=..., family='binomial)
+
+#am = transmission 
+data(mtcars)
+logistic.model <- glm(formula= am ~ wt, data=mtcars, family='binomial')
 ```
 
 Probabilities live on the range $(0, 1)$ - using the so-called logit function as a "link-function" we can map these onto the range $(-\infty, \infty)$, i.e. the real numbers.  
@@ -205,6 +353,10 @@ It is helpful to define the logit function and its inverse function for the foll
 ```{r}
 logit <-     function(x) log(x / (1 - x))
 inv.logit <- function(x) exp(x) / (1 + exp(x))
+
+#Estimated y-values 
+estimated_y_logm <- inv.logit(predict(logistic.model))
+plot(mtcars$wt, estimated_y_logm)
 ```
 
 1. plot the fitted values for __logistic.model__:  
@@ -221,7 +373,29 @@ inv.logit <- function(x) exp(x) / (1 + exp(x))
     0 (automatic), & \text{otherwise}
   \end{cases}
 \end{equation}    
-    
+
+```{r}
+# this is the plot based on the fitted values...
+plot(mtcars$wt, estimated_y_logm, xlim=c(0,7))
+
+logistic.model$coefficients
+ggplot(mtcars, aes(wt,am))+
+  geom_point(aes(colour=estimated_y))+
+  xlim(0,7)+
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))+
+  labs(x='wt', y='am', title = "Logistic Model: Sigmoid Function")+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+
+\begin{equation}
+  transmission_{guess}=
+  \begin{cases}
+    1 (manual), & \text{if}\ PR(y = 1) ≥ 0.5 \\
+    0 (automatic), & \text{otherwise}
+  \end{cases}
+\end{equation}   
+```
+
 3. plot quadratic fit alongside linear fit  
     i. judging visually, does adding a quadratic term make a difference?
     ii. check the details in the help of the AIC function - which of the models provide the better fit according to the AIC values and the residual deviance respectively?
