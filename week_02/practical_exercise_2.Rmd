@@ -13,7 +13,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load('lme4', 'dplyr')
+pacman::p_load('lme4', 'dplyr', 'ggplot2', 'stats', 'MuMIn')
 ```
 
 # Assignment 1: Using mixed effects modelling to model hierarchical data
@@ -51,7 +51,7 @@ politeness <- politeness %>%
   mutate(
     subject = as.factor(subject),
     gender = as.factor(gender),
-    attitude = as.factor(subject))
+    attitude = as.factor(attitude))
 ```
 
 2) Create a new data frame that just contains the subject _F1_ and run two linear models; one that expresses _f0mn_ as dependent on _scenario_ as an integer; and one that expresses _f0mn_ as dependent on _scenario_ encoded as a factor  
@@ -81,14 +81,30 @@ model_factor
 # i.
 model.matrix(model_integer)
 model.matrix(model_factor)
+# The integer encoding interprets the scenarios as one whole, whilst the factor encoding divides these into 7 scenarios. This creates a better overview.
 
 # ii.
 # The factor encoding is definitely best ... but why?
+# The integer encoding treats the scenarios as 'scores' or data points — which is not the way the scenario number should be treated in this case. The factor encoding treats it like TRUE/FALSE and in this way, we can work with the scenario column as an experiment condition.
 ```
 
 3) Make a plot that includes a subplot for each subject that has _scenario_ on the x-axis and _f0mn_ on the y-axis and where points are colour coded according to _attitude_
     i. Describe the differences between subjects
-    
+
+```{r}
+# 3
+politeness_factor <- politeness %>% 
+  mutate(
+  as.factor(scenario))
+
+
+ggplot(data = politeness_factor, aes(x = scenario, y = f0mn, color = attitude)) +
+  geom_point() +
+  facet_wrap(~ subject)+
+  theme_bw()
+
+```
+
 ## Exercise 2  - comparison of models
 
 For this part, make sure to have `lme4` installed.  
@@ -107,11 +123,70 @@ example.formula <- formula(dep.variable ~ first.level.variable + (1 | second.lev
     iv. a two-level model that models intercepts for both _scenario_ and _subject_
     v. which of the models has the lowest residual standard deviation, also compare the Akaike Information Criterion `AIC`?
     vi. which of the second-level effects explains the most variance?
+
+```{r}
+#i
+modeli <- lm(f0mn ~ gender, data = politeness)
+modeli
+
+# ii
+modelii <- lmer(f0mn ~ gender + (1 | scenario), data = politeness)
+modelii
+
+# iii
+modeliii <- lmer(f0mn ~ gender + (1 | subject), data = politeness)
+modeliii
+
+#iv
+modeliv <- lmer(f0mn ~ gender + (1 | subject) + (1 | scenario), data = politeness)
+modeliv
+
+#v
+# Model 4 has the lowest residual standard deviation with a value of 30.658.
+AIC(modeli, modelii, modeliii, modeliv)
+# Model 4 also has the lowest AIC with a value of 2092.482
+
+#vi
+r.squaredGLMM(modelii)
+r.squaredGLMM(modeliii)
+r.squaredGLMM(modeliv)
+# Model 4 explains the most variance (R2c = 0.8078), which makes sense as it takes the biggest part of the data into account.
+```
+
 2) Why is our single-level model bad?
     i. create a new data frame that has three variables, _subject_, _gender_ and _f0mn_, where _f0mn_ is the average of all responses of each subject, i.e. averaging across _attitude_ and_scenario_
     ii. build a single-level model that models _f0mn_ as dependent on _gender_ using this new dataset
     iii. make Quantile-Quantile plots, comparing theoretical quantiles to the sample quantiles) using `qqnorm` and `qqline` for the new single-level model and compare it to the old single-level model (from 1).i). Which model's residuals ($\epsilon$) fulfil the assumptions of the General Linear Model better?)
     iv. Also make a quantile-quantile plot for the residuals of the  multilevel model with two intercepts. Does it look alright?
+
+```{r}
+# 2
+
+# i
+new_df <- politeness %>%
+  filter(!is.na(f0mn)) %>% 
+  group_by(subject, gender) %>%
+  summarise(f0mn1=mean(f0mn))
+  
+glimpse(new_df)
+
+# ii
+newmodeli <- lm(f0mn1 ~ gender, data = new_df)
+newmodeli
+
+# iii
+qqnorm(residuals(newmodeli))
+qqline(residuals(newmodeli))
+
+qqnorm(residuals(modeli))
+qqline(residuals(modeli))
+
+#iv
+qqnorm(residuals(modeliv))
+qqline(residuals(modeliv))
+# It looks fine.
+```
+
 3) Plotting the two-intercepts model
     i. Create a plot for each subject, (similar to part 3 in Exercise 1), this time also indicating the fitted value for each of the subjects for each for the scenarios (hint use `fixef` to get the "grand effects" for each gender and `ranef` to get the subject- and scenario-specific effects)
     
