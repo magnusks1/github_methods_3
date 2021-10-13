@@ -24,6 +24,7 @@ The dataset has been shared on GitHub, so make sure that the csv-file is on your
 
 ```{r}
 politeness <- read.csv('politeness.csv') ## read in data
+attach(politeness)
 ```
 
 # Exercises and objectives
@@ -52,11 +53,12 @@ glimpse(politeness)
 # -> f0mn = mean of the f0, which is something to do with frequency (pitch??)
 # -> hiss_count = audible and nasal hissing/air-sucking in between talking
 
+# Could be an option to elaborate on the descriptions of the variables — to get a better understanding of what to do in the exercises. E.g. use length(unique(variable)) to see e.g. how many subjects there are.  
 
 politeness$subject <- as_factor(politeness$subject)
 politeness$gender <- as_factor(politeness$gender)
 politeness$attitude <- as_factor(politeness$attitude)
-
+# Always good to factorize non-numeric variables to make R treat them correctly.
 glimpse(politeness)
 
 ```

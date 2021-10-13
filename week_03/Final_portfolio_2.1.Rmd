@@ -34,7 +34,7 @@ The data is associated with Experiment 2 of the article at the following DOI htt
 1) Put the data from all subjects into a single data frame  
 ```{r}
 df <- read_bulk(
-  directory = 'experiment_2/',
+  directory = 'experiment_02/',
   fun = read_csv
   )
 ```
@@ -120,6 +120,7 @@ ggplot(df.1.2.3, aes(x = target.contrast, y = fitted_correct)) +
       
     iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_  
 ```{r}
+#Partial pooling
 model.1.2.4 <- glmer(correct ~ target.contrast + (1 + target.contrast|subject), data = df.1.2.3, family = binomial(link = "logit"))
 model.1.2.4
 summary(model.1.2.4)
@@ -152,8 +153,11 @@ Now we __only__ look at the _experiment_ trials (_trial.type_)
 df_experiment <- filter(df, trial.type=="experiment")
 df_4participants <- filter(df_experiment, subject=="001" | subject=="002" | subject=="003" | subject=="004")
 
+# Could also be individual models per subject .. depends on how you read the question.
+
 model.2.1.1 <- lmer(rt.obj ~ 1 + (1 | subject) , data = df_4participants)
 model.2.1.1
+# should probably be 'lmer(rt.obj ~ 1)' only
 
 qqnorm(residuals(model.2.1.1))
 qqline(residuals(model.2.1.1))
@@ -173,7 +177,7 @@ model.2.1.2
 qqnorm(residuals(model.2.1.2))
 qqline(residuals(model.2.1.2))
 
-#it doesn't improve it, but it looks different
+#It does not improve it, but it looks different. It might actually improve the data a bit as it is not as skewed as before — it now looks more normally distributed but still not perfect.
 ```
     
 2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)
