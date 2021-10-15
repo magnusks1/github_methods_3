@@ -34,7 +34,7 @@ The data is associated with Experiment 1 of the article at the following DOI htt
 
 ## 1. Loading data and packages
 ```{r}
-pacman::p_load(tidyverse, readbulk, dplyr, lme4)
+pacman::p_load(tidyverse, readbulk, dplyr, lme4, multcomp)
 
 # Reading data
 df <- read_bulk(
@@ -230,6 +230,8 @@ We want to test a hypothesis for each of the three neighbouring differences in P
 
 1) Fit a model based on the following formula: `correct ~ pas * target.frames + (target.frames | subject))`
     i. First, use `summary` (yes, you are allowed to!) to argue that accuracy increases faster with objective evidence for PAS 2 than for PAS 1. 
+
+## 1. Fitting model
 
 ```{r}
 pasmodel <- glmer(correct ~ pas * target.frames + (target.frames | subject), data = df,  family = "binomial")
