@@ -32,6 +32,7 @@ REMEMBER: This is part 2 of Assignment 2 and will be part of your final portfoli
 Go to https://osf.io/ecxsj/files/ and download the files associated with Experiment 1 (there should be 29).  
 The data is associated with Experiment 1 of the article at the following DOI https://doi.org/10.1016/j.concog.2019.03.007  
 
+## 1. Loading data and packages
 ```{r}
 pacman::p_load(tidyverse, readbulk, dplyr, lme4)
 
@@ -47,6 +48,7 @@ df$seed[df$seed == 0] <- NA
 1) Put the data from all subjects into a single data frame - note that some of the subjects do not have the _seed_ variable. For these subjects, add this variable and make in _NA_ for all observations. (The _seed_ variable will not be part of the analysis and is not an experimental variable)  
     i. Factorise the variables that need factorising
 
+### 1.1 Factorizing data
 ```{r}
 # FACTORIZING
 df$obj.resp <- as.factor(df$obj.resp)
@@ -60,6 +62,7 @@ df$subject <- as.factor(df$subject)
 
     ii. Remove the practice trials from the dataset (see the _trial.type_ variable)
 
+### 1.2 Removing practise trials
 ```{r}
 # REMOVING PRACTISE TRIALS
 df <- df %>% 
@@ -68,16 +71,17 @@ df <- df %>%
 
     iii. Create a _correct_ variable
 
+### 1.3 Creating correct column
 ```{r}
 # CREATING CORRECT COLIMN
 df$correct <- ifelse(df$obj.resp == "o" & df$target.type == "odd" | df$obj.resp == "e" & df$target.type == "even", 1, 0)
 
 class(df$correct)
-df$correct <- as.logical(df$correct)
 ```
 
     iv. Describe how the _target.contrast_ and _target.frames_ variables differ compared to the data from part 1 of this assignment 
 
+### 1.4 Differing variables
 In part 1, target contrast varied between 1 and 0 but here, the number is consistent all the way down.
 The target frame variable was not present in part 1. Here, it tells the time the target was displayed for the participant.
 
@@ -86,6 +90,7 @@ The target frame variable was not present in part 1. Here, it tells the time the
 
 1) Do logistic regression - _correct_ as the dependent variable and _target.frames_ as the independent variable. (Make sure that you understand what _target.frames_ encode). Create two models - a pooled model and a partial-pooling model. The partial-pooling model should include a subject-specific intercept.
 
+## 1 Logistic regression models
 ```{r}
 pooledmodel <- glm(correct ~ target.frames, data = df, family = binomial(link = "logit"))
 partialmodel <- glmer(correct ~ target.frames + (1|subject), data = df, family = binomial(link = "logit"))
@@ -93,50 +98,130 @@ partialmodel <- glmer(correct ~ target.frames + (1|subject), data = df, family =
 
     i. the likelihood-function for logistic regression is: $L(p)={\displaystyle\prod_{i=1}^Np^{y_i}(1-p)^{(1-y_i)}}$ (Remember the probability mass function for the Bernoulli Distribution). Create a function that calculates the likelihood.
 
+### 1.1 Creating likelihood function
 ```{r}
-# CREATING FUNCTION
-function.5.1.1 <- function(p, y.i){
-  (prod(p^(y.i)*(1-p)^(1-y.i)))
+# CREATING FUNCTION that works with only numbers
+# function.5.1.1 <- function(p, y.i){
+#   (prod(p^(y.i)*(1-p)^(1-y.i)))
+# }
+# function.5.1.1(0.3, 4)
+
+# CREATING FUNCTION that can calculate likelihood for model
+likelihood_function <- function(model, y){
+  p <- fitted(model)
+  y <- y
+  
+  return(prod(p^y*(1-p)^(1-y)))
 }
-function.5.1.1(0.3, 4)
-function.5.1.1(pooledmodel)
 ```
 
     ii. the log-likelihood-function for logistic regression is: $l(p) = {\displaystyle\sum_{i=1}^N}[y_i\ln{p}+(1-y_i)\ln{(1-p)}$. Create a function that calculates the log-likelihood
 
+### 1.2 Creating log-likelihood function
 ```{r}
-function.5.1.2 <- function()
+loglik_function <- function(model, y){
+  p <- fitted(model)
+  y <- y
+  
+  return(sum(y*log(p)+(1-y)*log(1-p)))
+}
 ```
 
-    iii. apply both functions to the pooling model you just created. Make sure that the log-likelihood matches what is returned from the _logLik_ function for the pooled model. Does the likelihood-function return a value that is surprising? Why is the log-likelihood preferable when working with computers with limited precision?  
-    iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)  
+    iii. apply both functions to the pooling model you just created. Make sure that the log-likelihood matches what is returned from the _logLik_ function for the pooled model. Does the likelihood-function return a value that is surprising? Why is the log-likelihood preferable when working with computers with limited precision? 
+
+### 1.3 Evaluating functions
+```{r}
+likelihood_function(pooledmodel, df$correct)
+loglik_function(pooledmodel, df$correct)
+logLik(pooledmodel)
+```
+
+When checking our function with the logLik, the same numbers are returned. The difference is that the R-log-likelihood-function returns degrees of freedom which our model does not.
+The likelihood-function returns a value of 0 which is surprising. There are no decimals — so the number is probably just extremely small and not entirely 0.
+**The log-likelihood is better because some probability distributions are only logarithmically concave.** And furthermore, this computer is not precise enough to show the exact value.
+
+    iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)
+
+### 1.4 Applying to partial pooling model
+```{r}
+likelihood_function(partialmodel, df$correct)
+loglik_function(partialmodel, df$correct)
+```
+
+The log-likelihood function returns a higher number for the partial pooling model.
+
+
 2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, then add subject-level intercepts, then add a group-level effect of _target.frames_ and finally add subject-level slopes for _target.frames_. Also assess whether or not a correlation between the subject-level slopes and the subject-level intercepts should be included.
 
+## 2 Creating models
 ```{r}
 # null model
-nullmodel <- glm(correct ~1, family = "binomial", data = df)
-logLik(nullmoddel)
+nullmodel <- glm(correct ~ 1, family = "binomial", data = df)
+logLik(nullmodel)
 
 # subject-level intercepts
 m.subj.int <- glmer(correct ~ 1 + (1 | subject), family = 'binomial', data = df)
 logLik(m.subj.int)
 
 #group-level effects of target frames
-m.gr.ef <- glmer(correct ~ 1 + (1 | subject) + (1 | target.frames), family = "binomial", df)
+m.gr.ef <- glmer(correct ~ target.frames + (1 | subject), family = "binomial", df)
 logLik(m.gr.ef)
 
 #subject-level slopes of target frames
-m.subj.sl <- glmer(correct ~ target.frames + (1 + subject|subject), family = 'binomial', data = df)
+m.subj.sl <- glmer(correct ~ target.frames + (1 + target.frames|subject), family = 'binomial', data = df)
 logLik(m.subj.sl)
 ```
 
-**We are unsure if we should keep the predicted by 1 or not.** Use LogLik to test the models.
+According to the logLik-tests, adding the most predictor variables results in the best model (ie. the model explaining the most data).
+An interaction for the subject-level slopes and intercepts should be modelled — this is seen as the fourth model explains most of the data (according to the highest log-likelihood ratio).
 
     i. write a short methods section and a results section where you indicate which model you chose and the statistics relevant for that choice. Include a plot of the estimated group-level function with `xlim=c(0, 8)` that includes the estimated subject-specific functions.
-    ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)  
-3) Now add _pas_ to the group-level effects - if a log-likelihood ratio test justifies this, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this  
-    i. if your model doesn't converge, try a different optimizer  
-    ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?  
+
+### 2.1 Methods section
+
+
+    ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %) 
+
+### 2.2 Identifying single subjects
+
+    
+3) Now add _pas_ to the group-level effects - if a log-likelihood ratio test justifies this, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this
+
+## 3. Adding other group-level effects
+
+```{r}
+m.pas <- glmer(correct ~ target.frames + pas + (1 + target.frames|subject), family = 'binomial', data = df)
+logLik(m.pas)
+```
+
+As the log-likelihood ratio is now higher, adding _pas_ to group-level effects is justified. Thus, we will add an interaction between the current group-level effects.
+
+### 3. Interaction effect
+```{r}
+m.pas.int <- glmer(correct ~ target.frames*pas + (1 + target.frames|subject), family = 'binomial', data = df)
+logLik(m.pas.int)
+```
+
+This model is also justified as the log-likelihood now is even higher.
+
+    i. if your model doesn't converge, try a different optimizer
+
+Our model does converge and thus, we are not using a different optimizer.
+
+    ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?
+
+### 3.2 Plotting
+```{r}
+# Fitting model values
+df$fittedv <- fitted(m.pas.int)
+
+# Plotting
+ggplot(df, aes(x = target.frames, y = fittedv)) +
+  geom_point(aes(target.frames, fittedv), color = "salmon2") +
+  facet_wrap(~ pas) +
+  theme_bw()
+```
+
 
 # EXERCISE 6 - Test linear hypotheses
 
