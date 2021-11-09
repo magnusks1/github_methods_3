@@ -28,6 +28,10 @@ Also create a text file that is called _.Renviron_ (remember the dot) placed in 
 ```{r}
 library(reticulate)
 print(conda_list())
+library(Rcpp)
+#getwd()
+#setwd("/Volumes/GoogleDrive/Mit drev/CogSci/3. semester/Methods3/Class/github/github_methods_3")
+Sys.setenv(RETICULATE_PYTHON = "/Users/magnus.k.sigaard/opt/miniconda3/envs/methods3/bin/python")
 ```
 
 To update your environment based on the updated `methods3_environment.yml` file, go to your _week_06_ folder and run the following from a _bash_ interpreter (e.g. _terminal_):  
@@ -149,6 +153,20 @@ X = np.zeros(shape=(n_samples, 2))
 X[:, 0] = x ** 0
 X[:, 1] = x ** 1
 
+beta_hat = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+print(beta_hat)
+
+#y_hat = intercept + slope * x
+
+y_hat = beta_hat[0] + beta_hat[1] * x
+print(y_hat)
+
+```
+
+```{python}
+#1.1.ii
+plt.scatter(x, y)
+plt.plot(x, y_hat, color = 'red')
 ```
 
 
